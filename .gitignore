@@ -1,0 +1,7 @@
+.venv
+cache
+artifacts
+node_modules
+hardhat.config.js 
+package-lock.json 
+package.json 
