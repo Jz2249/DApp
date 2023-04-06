@@ -5,6 +5,7 @@
 const provider = new ethers.providers.JsonRpcProvider("http://localhost:8545");
 var defaultAccount;
 
+
 // Constant we use later
 var GENESIS = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
@@ -166,13 +167,15 @@ async function getTotalOwed(user) {
 // Return null if you can't find any activity for the user.
 // HINT: Try looking at the way 'getAllFunctionCalls' is written. You can modify it if you'd like.
 async function getLastActive(user) {
-	var results = await getAllFunctionCalls(contractAddress, "add_IOU");
+	let results = await getAllFunctionCalls(contractAddress, "add_IOU");
 	console.log(results);
-	for (var i = 0; i < results.length; i++) {
+	for (let i = 0; i < results.length; i++) {
 		let result = results[i];
-		// console.log(result.args);
+		// console.log('result.args is' + result.args[0]);
+		// console.log('result is' + result.from);
 		// console.log(result);
 		if (result.from.toLowerCase() == user.toLowerCase() || result.args[0] == user.toLowerCase()) { // last activity is defined
+			console.log(result.t)
 			return result.t;
 		}
 	}
@@ -183,13 +186,13 @@ async function getLastActive(user) {
 // The person you owe money is passed as 'creditor'
 // The amount you owe them is passed as 'amount'
 async function add_IOU(creditor, amount) {
-	let from = await provider.listAccounts();
-	(console.log("add_iou from %s", from[1]));
-	from = parseInt(from[0]);
-	let path = doBFS(creditor, from, getNeighbors);
-	let amt = 0;
+	var from = defaultAccount;
+	console.log("add_iou from %s", from);
+	from = parseInt(from);
+	var path = doBFS(creditor, from, getNeighbors);
+	var amt = 0;
 	if (path !== null) {
-		let min = amount;
+		var min = amount;
 		for (let i = 0; i < path.length - 1; i++) {
 			amt = await lookup(path[i], path[i + 1]);
 			if (amt < min) min = amt;
@@ -267,6 +270,7 @@ async function doBFS(start, end, getNeighbors) {
 // This sets the default account on load and displays the total owed to that
 // account.
 provider.listAccounts().then((response)=> {
+	// console.log('response is ',response[0]);
 	defaultAccount = response[0];
 
 	getTotalOwed(defaultAccount).then((response)=>{
@@ -349,16 +353,65 @@ async function sanityCheck() {
 	var score = 0;
 
 	var accounts = await provider.listAccounts();
+	// defaultAccount = accounts[0];
+
+	// var users = await getUsers();
+	// score += check("getUsers() initially empty", users.length === 0);
+
+	// var owed = await getTotalOwed(accounts[1]);
+	// score += check("getTotalOwed(0) initially empty", owed === 0);
+
+	// var lookup_0_1 = await BlockchainSplitwise.lookup(accounts[0], accounts[1]);
+	// console.log("lookup(0, 1) current value" + lookup_0_1);
+	// score += check("lookup(0,1) initially 0", parseInt(lookup_0_1, 10) === 0);
+
+	// var response = await add_IOU(accounts[1], "10");
+
+	// users = await getUsers();
+	// score += check("getUsers() now length 2", users.length === 2);
+
+	// owed = await getTotalOwed(accounts[0]);
+	// score += check("getTotalOwed(0) now 10", owed === 10);
+
+	// lookup_0_1 = await BlockchainSplitwise.lookup(accounts[0], accounts[1]);
+	// score += check("lookup(0,1) now 10", parseInt(lookup_0_1, 10) === 10);
+
+	// var timeLastActive = await getLastActive(accounts[0]);
+	// var timeNow = Date.now()/1000;
+	// var difference = timeNow - timeLastActive;
+	// score += check("getLastActive(0) works", difference <= 60 && difference >= -3); // -3 to 60 seconds
+
+	// console.log("Final Score: " + score +"/21");
+	// // custom test
+	// var response = await add_IOU(accounts[2], "10");
+	// users = await getUsers();
+	// score += check("getUsers() now length 3", users.length === 3);
+	// owed = await getTotalOwed(accounts[0]);
+	// score += check("getTotalOwed(0) now 10", owed === 20);
+	// lookup_0_2 = await BlockchainSplitwise.lookup(accounts[0], accounts[2]);
+	// score += check("lookup(0,2) now 10", parseInt(lookup_0_2, 10) === 10);
+
+	// defaultAccount = await accounts[1];
+	// var response = await add_IOU(accounts[0], "10");
+	// users = await getUsers();
+	// score += check("getUsers() now length 3", users.length === 3);
+	// owed = await getTotalOwed(accounts[1]);
+	// score += check("getTotalOwed(0) now 10", owed === 0);
+	// lookup_1_0 = await BlockchainSplitwise.lookup(accounts[1], accounts[0]);
+	// score += check("lookup(1,0) now 0", parseInt(lookup_1_0, 10) === 0);
+
+	var score = 0;
+
+	// var accounts = await web3.eth.getAccounts();
 	defaultAccount = accounts[0];
 
 	var users = await getUsers();
 	score += check("getUsers() initially empty", users.length === 0);
 
-	var owed = await getTotalOwed(accounts[1]);
+	var owed = await getTotalOwed(accounts[0]);
 	score += check("getTotalOwed(0) initially empty", owed === 0);
 
 	var lookup_0_1 = await BlockchainSplitwise.lookup(accounts[0], accounts[1]);
-	console.log("lookup(0, 1) current value" + lookup_0_1);
 	score += check("lookup(0,1) initially 0", parseInt(lookup_0_1, 10) === 0);
 
 	var response = await add_IOU(accounts[1], "10");
@@ -377,7 +430,51 @@ async function sanityCheck() {
 	var difference = timeNow - timeLastActive;
 	score += check("getLastActive(0) works", difference <= 60 && difference >= -3); // -3 to 60 seconds
 
-	console.log("Final Score: " + score +"/21");
+	// Loop 3->4, 4->5, 5->3
+	defaultAccount = accounts[3];
+	var response = await add_IOU(accounts[4], "50");
+	var lookup_3_4 = await BlockchainSplitwise.lookup(accounts[3], accounts[4]);
+	score += check("lookup(3,4) now 50", parseInt(lookup_3_4, 10) === 50);
+	
+	defaultAccount = accounts[4];
+	var response = await add_IOU(accounts[5], "50");
+	var lookup_4_5 = await BlockchainSplitwise.lookup(accounts[4], accounts[5]);
+	score += check("lookup(4,5) now 50", parseInt(lookup_4_5, 10) === 50);
+	
+	defaultAccount = accounts[5];
+	var response = await add_IOU(accounts[3], "50");
+	var lookup_5_3 = await BlockchainSplitwise.lookup(accounts[5], accounts[3]);
+	score += check("Resolved loop: lookup(5,3) now 0", parseInt(lookup_5_3, 10) === 0);
+	
+	// END OF LOOP 1
+	
+	// loop 6->7, 7->8, 8->6
+	defaultAccount = accounts[6];
+	var response = await add_IOU(accounts[7], "50");
+	var lookup_6_7 = await BlockchainSplitwise.lookup(accounts[6], accounts[7]);
+	score += check("lookup(6,7) now 50", parseInt(lookup_6_7, 10) === 50);
+	
+	defaultAccount = accounts[7];
+	var response = await add_IOU(accounts[8], "50");
+	var lookup_7_8 = await BlockchainSplitwise.lookup(accounts[7], accounts[8]);
+	score += check("lookup(7,8) now 50", parseInt(lookup_7_8, 10) === 50);
+	
+	defaultAccount = accounts[8];
+	var response = await add_IOU(accounts[6], "40");
+	var lookup_8_6 = await BlockchainSplitwise.lookup(accounts[8], accounts[6]);
+	score += check("Resolved loop: lookup(8,6) now 0", parseInt(lookup_8_6, 10) === 0);
+	
+	// END OF LOOP 1
+
+	// Verify the weight has been reduced from 50 to 10.
+	lookup_6_7 = await BlockchainSplitwise.lookup(accounts[6], accounts[7]);
+	score += check("lookup(6,7) now 10", parseInt(lookup_6_7, 10) === 10);
+	
+	lookup_7_8 = await BlockchainSplitwise.lookup(accounts[7], accounts[8]);
+	score += check("lookup(7,8) now 10", parseInt(lookup_7_8, 10) === 10);
+	
+	console.log("Final Score: " + score +"/45");
 }
+
 
 sanityCheck() //Uncomment this line to run the sanity check when you first open index.html

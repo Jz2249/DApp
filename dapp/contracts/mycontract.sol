@@ -26,6 +26,9 @@ contract Splitwise {
         // what if I owe myself?
         require(msg.sender != creditor, "Error! you can't owe yourself");
         user_debts[msg.sender][creditor] += amount;
+        console.log("#################################");
+        console.log( msg.sender);
+        console.log("#################################");
         addUser(msg.sender);
         addUser(creditor);
         console.log("transcation from %s to %s with", msg.sender, creditor);
