@@ -25,9 +25,9 @@ var abi = [
           "type": "uint32"
         },
         {
-          "internalType": "address",
-          "name": "debtor",
-          "type": "address"
+          "internalType": "address[]",
+          "name": "path",
+          "type": "address[]"
         }
       ],
       "name": "add_IOU",
@@ -185,7 +185,8 @@ async function getTotalOwed(user) {
 	let users = await getUsers();
 	for (let i = 0; i < users.length; i++) {
 		amt = await lookup(user, users[i]);
-		if (amt > 0) {
+		if (parseInt(amt) > 0) {
+			amt = parseInt(amt);
 			totalOwed += amt;
 		}
 	}
@@ -212,23 +213,16 @@ async function getLastActive(user) {
 // The person you owe money is passed as 'creditor'
 // The amount you owe them is passed as 'amount'
 async function add_IOU(creditor, amount) {
-	var from = defaultAccount;
-	var path = await doBFS(creditor, from, getNeighbors);
-	var min = 0;
+	var path = await doBFS(creditor, defaultAccount, getNeighbors);
 	if (path !== null) {
-		min= amount;
-		for (let i = 0; i < path.length - 1; i++) {
-			var amt =  await lookup(path[i], path[i + 1]);
-			if (amt < min) {
-				min = amt;
-			}
-		}
-		for (let i = 0; i < path.length - 1; i++) {
-			await BlockchainSplitwise.reduce_debt(path[i], path[i + 1], min);
-		}
+		await BlockchainSplitwise.connect(provider.getSigner(defaultAccount)).add_IOU(creditor, amount, path);
 	}
-	await BlockchainSplitwise.add_IOU(creditor, amount - min, from);
+	else {
+		await BlockchainSplitwise.connect(provider.getSigner(defaultAccount)).add_IOU(creditor, amount, []);
+	}
 }
+
+	
 
 // =============================================================================
 //                              Provided Functions
@@ -374,11 +368,11 @@ function check(name, condition) {
 }
 
 async function sanityCheck() {
-	console.log ("\nTEST", "Simplest possible test: only runs one add_IOU; uses all client functions: lookup, getTotalOwed, getUsers, getLastActive");
+	// console.log ("\nTEST", "Simplest possible test: only runs one add_IOU; uses all client functions: lookup, getTotalOwed, getUsers, getLastActive");
 
-	var score = 0;
+	// var score = 0;
 
-	var accounts = await provider.listAccounts();
+	// var accounts = await provider.listAccounts();
 	// defaultAccount = accounts[0];
 
 	// var users = await getUsers();
@@ -408,6 +402,7 @@ async function sanityCheck() {
 	// score += check("getLastActive(0) works", difference <= 60 && difference >= -3); // -3 to 60 seconds
 
 	// console.log("Final Score: " + score +"/21");
+
 
 
 	// custom test
@@ -485,6 +480,7 @@ async function sanityCheck() {
 	score += check("lookup(7,8) now 10", parseInt(lookup_7_8, 10) === 10);
 	
 	console.log("Final Score: " + score +"/45");
+
 }
 
 
