@@ -22,16 +22,15 @@ contract Splitwise {
     }
 
     // Inform the contract that msg.sender now owes amt more dollars to creditor.
-    function add_IOU(address creditor, uint32 amount) public {
-        // what if I owe myself?
-        require(msg.sender != creditor, "Error! you can't owe yourself");
-        user_debts[msg.sender][creditor] += amount;
+    function add_IOU(address creditor, uint32 amount, address debtor) public {      
+        require(debtor != creditor, "wrong transaction");
+        user_debts[debtor][creditor] += amount;
         console.log("#################################");
-        console.log( msg.sender);
+        console.log( debtor);
         console.log("#################################");
-        addUser(msg.sender);
+        addUser(debtor);
         addUser(creditor);
-        console.log("transcation from %s to %s with", msg.sender, creditor);
+        console.log("transcation from %s to %s with", debtor, creditor);
     }
 
     function reduce_debt(address debtor, address creditor, uint32 amount) public {

@@ -23,6 +23,11 @@ var abi = [
           "internalType": "uint32",
           "name": "amount",
           "type": "uint32"
+        },
+        {
+          "internalType": "address",
+          "name": "debtor",
+          "type": "address"
         }
       ],
       "name": "add_IOU",
@@ -65,6 +70,29 @@ var abi = [
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "debtor",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "creditor",
+          "type": "address"
+        },
+        {
+          "internalType": "uint32",
+          "name": "amount",
+          "type": "uint32"
+        }
+      ],
+      "name": "reduce_debt",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -126,7 +154,8 @@ var BlockchainSplitwise = new ethers.Contract(contractAddress, abi, provider.get
 // TODO: Add any helper functions here!
 async function lookup(from, to) {
 	let amt = await BlockchainSplitwise.lookup(from, to);
-	return amt;
+	console.log("amt is ", amt);
+	return parseInt(amt);
 }
 
 async function getNeighbors(user) {
@@ -156,7 +185,7 @@ async function getTotalOwed(user) {
 	let users = await getUsers();
 	for (let i = 0; i < users.length; i++) {
 		amt = await lookup(user, users[i]);
-		if (parseInt(amt) > 0) {
+		if (amt > 0) {
 			totalOwed += amt;
 		}
 	}
@@ -171,9 +200,6 @@ async function getLastActive(user) {
 	console.log(results);
 	for (let i = 0; i < results.length; i++) {
 		let result = results[i];
-		// console.log('result.args is' + result.args[0]);
-		// console.log('result is' + result.from);
-		// console.log(result);
 		if (result.from.toLowerCase() == user.toLowerCase() || result.args[0] == user.toLowerCase()) { // last activity is defined
 			console.log(result.t)
 			return result.t;
@@ -187,21 +213,21 @@ async function getLastActive(user) {
 // The amount you owe them is passed as 'amount'
 async function add_IOU(creditor, amount) {
 	var from = defaultAccount;
-	console.log("add_iou from %s", from);
-	from = parseInt(from);
-	var path = doBFS(creditor, from, getNeighbors);
-	var amt = 0;
+	var path = await doBFS(creditor, from, getNeighbors);
+	var min = 0;
 	if (path !== null) {
-		var min = amount;
+		min= amount;
 		for (let i = 0; i < path.length - 1; i++) {
-			amt = await lookup(path[i], path[i + 1]);
-			if (amt < min) min = amt;
+			var amt =  await lookup(path[i], path[i + 1]);
+			if (amt < min) {
+				min = amt;
+			}
 		}
 		for (let i = 0; i < path.length - 1; i++) {
-			await BlockchainSplitwise.reduce_debt(path[i], path[i + 1], amt);
+			await BlockchainSplitwise.reduce_debt(path[i], path[i + 1], min);
 		}
 	}
-	await BlockchainSplitwise.add_IOU(creditor, amount - amt);
+	await BlockchainSplitwise.add_IOU(creditor, amount - min, from);
 }
 
 // =============================================================================
@@ -382,28 +408,13 @@ async function sanityCheck() {
 	// score += check("getLastActive(0) works", difference <= 60 && difference >= -3); // -3 to 60 seconds
 
 	// console.log("Final Score: " + score +"/21");
-	// // custom test
-	// var response = await add_IOU(accounts[2], "10");
-	// users = await getUsers();
-	// score += check("getUsers() now length 3", users.length === 3);
-	// owed = await getTotalOwed(accounts[0]);
-	// score += check("getTotalOwed(0) now 10", owed === 20);
-	// lookup_0_2 = await BlockchainSplitwise.lookup(accounts[0], accounts[2]);
-	// score += check("lookup(0,2) now 10", parseInt(lookup_0_2, 10) === 10);
 
-	// defaultAccount = await accounts[1];
-	// var response = await add_IOU(accounts[0], "10");
-	// users = await getUsers();
-	// score += check("getUsers() now length 3", users.length === 3);
-	// owed = await getTotalOwed(accounts[1]);
-	// score += check("getTotalOwed(0) now 10", owed === 0);
-	// lookup_1_0 = await BlockchainSplitwise.lookup(accounts[1], accounts[0]);
-	// score += check("lookup(1,0) now 0", parseInt(lookup_1_0, 10) === 0);
 
+	// custom test
 	var score = 0;
-
-	// var accounts = await web3.eth.getAccounts();
-	defaultAccount = accounts[0];
+	var accounts = await provider.listAccounts();
+	
+	defaultAccount = await accounts[0];
 
 	var users = await getUsers();
 	score += check("getUsers() initially empty", users.length === 0);
@@ -477,4 +488,4 @@ async function sanityCheck() {
 }
 
 
-sanityCheck() //Uncomment this line to run the sanity check when you first open index.html
+// sanityCheck() //Uncomment this line to run the sanity check when you first open index.html
